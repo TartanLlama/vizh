@@ -2,6 +2,14 @@
 
 An esoteric visual language based on a multi-tape turing machine, designed for compatibility with C.
 
+Here is an implementation of `memcpy`:
+
+![Implementation of memcpy in vizh](samples/memcopy.png)
+
+Yes, you literally pass an image file to the compiler.
+
+**Current state: most of the compiler is implemented and you can link against C code and call it. The parser is not yet implemented, neither is the CLI driver.**
+
 ## Language
 
 ### Abstract Machine
@@ -94,12 +102,20 @@ $t1 01234
     ^
 ```
 
-### Built-in Functions
+### `libv`
 
-Functions built-in to vizh are:
+The vizh standard library is called `libv` and provides the following functions.
+
+**Current status: Only `putstr` is implemented**
+
+#### I/O
 
 - `readin`: read an ASCII character from stdin and write its integral representation into the cell pointed to by the r/w head
 - `print`: print the value of the cell pointed to by the r/w head to stout, interpreted as an ASCII character
+- `putstr`: write the null-terminated ASCII string starting at the position pointed to by the r/w head to stdout.
+
+#### Memory
+
 - `newtape`: allocate a new secondary tape underneath the last one currently allocated for this function (or the primary tape if there are no secondary tapes)
 - `freetape`: deallocate the bottom-most secondary tape for this function (no-op if there are not any)
 
@@ -108,3 +124,11 @@ Functions built-in to vizh are:
 #### `memcopy`
 
 ![Implementation of memcpy in vizh](samples/memcopy.png)
+
+## Implementation
+
+The provided implementation of `vizh` compiles to C and can link executables.
+
+There is currently no command-line driver, you need to drive the compiler and linker yourself.
+
+There is currently no parser, you need to construct the IR yourself (see [tests](/tests) for examples).
