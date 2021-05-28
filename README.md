@@ -8,7 +8,7 @@ Here is an implementation of `memcpy`:
 
 Yes, you literally pass an image file to the compiler.
 
-**Current state: most of the compiler is implemented and you can link against C code and call it. The parser is not yet implemented, neither is the CLI driver.**
+**Current state: most of the compiler backend is implemented and you can link against C code and call it. The parser is not yet implemented, neither is the CLI driver.**
 
 ## Language
 
