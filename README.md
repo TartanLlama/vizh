@@ -1,6 +1,6 @@
 # vizh
 
-An esoteric visual language based on a multi-tape turing machine.
+An esoteric visual language based on a multi-tape turing machine, designed for compatibility with C.
 
 ## Language
 
