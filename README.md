@@ -8,15 +8,13 @@ An esoteric visual language based on a multi-tape turing machine, designed for c
 
 The vizh abstract machine consists of:
 
-- A primary tape of 4096 8-bit unsigned integers
-- Secondary tapes of 4096 8-bit unsigned integers which can be created and destroyed at runtime
+- Some number of *tapes* which are contiguous groups of 8-bit unsigned integers
 - A read/write head with storage for a single 8-bit unsigned integer
 
 The initial state of the abstract machine is:
 
-- All primary tape cells are initialised to 0
-- No secondary tapes are allocated
-- The read/write head is initialised to the left-most cell of the primary tape
+- A single tape of size 4096 is allocated with all cells initialised to 0
+- The read/write head is initialised to the left-most cell of this tape
 
 See [instructions](#instructions) for the valid operations on the abstract machine.
 
@@ -36,24 +34,19 @@ A vizh function is an image file containing:
 
 Function names are alphanumeric: `[a-zA-Z][a-zA-Z0-9]*`.
 
-Function signatures are a sequence of parameter specifiers followed by a single return type specifier.
+Function signatures a number specifying how many tapes the function takes as an argument, followed by an exclaimation mark if the function returns a tape.
 
-Valid parameter specifiers are:
+The tapes available to a vizh function consist of its tape arguments. On entry to the function the r/w head is initialised to the start of the first tape argument, if any.
 
-- The capital letter `N` for number
-- The capital letter `T` for tape
+A function returns when control flow reaches the end of its instructions. If the function is specified to return a tape then:
+- If the tape returned is already one of the tapes available to the caller, nothing happens
+- Otherwise, the tape is appended to the list of tapes available to the caller
 
-Valid return specifiers are:
-
-- The capital letter `N` for number
-- The capital letter `T` for tape
-- The capital letter `V` for void (none)
-
-Each vizh function has its own set of secondary tapes which initially consists of any tape arguments passed to it.
+Any tapes allocated by a function and not returned are automatically deallocated when the function exits.
 
 #### Function Calls
 
-When you call a function, integer arguments are taken from subsequent positions from the r/w head's last position on the primary tape, and subsequent pointer arguments are taken from the currently active tape onwards.
+When you call a function subsequent pointer arguments are taken from the currently active tape onwards.
 
 For example, given the following state of the abstract machine where `^` is the last position of the r/w head on that tape and `$` is the active tape:
 
@@ -66,15 +59,7 @@ $t2 99999
     ^
 ```
 
-Then a call to a function with the signature `ITIT` would supply the arguments `1, t2, 2, t3`.
-
-#### Returning
-
-If the function is specified to return a number, then the value at the r/w head is stored, the r/w head is moved to its last position on the primary tape, right one cell, and the stored value is written there.
-
-If the function is specified to return a tape, then the currently-active tape is appended to the caller's secondary tapes if it wasn't already one of them.
-
-Any tapes allocated by the callee and not returned are freed when the function exists.
+Then a call to a function that takes two tapes would supply the arguments `t2, t3`.
 
 ### Instructions
 
