@@ -68,11 +68,13 @@ $t2 99999
 
 Then a call to a function with the signature `ITIT` would supply the arguments `1, t2, 2, t3`.
 
-#### Returning Values
+#### Returning
 
-If the function is specified to return a number, then the value at the current position of the r/w head is returned.
+If the function is specified to return a number, then the value at the r/w head is stored, the r/w head is moved to its last position on the primary tape, right one cell, and the stored value is written there.
 
-If the function is specified to return a tape, then the currently-active tape is returned.
+If the function is specified to return a tape, then the currently-active tape is appended to the caller's secondary tapes if it wasn't already one of them.
+
+Any tapes allocated by the callee and not returned are freed when the function exists.
 
 ### Instructions
 
