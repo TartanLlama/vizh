@@ -40,14 +40,37 @@ Function signatures are a sequence of parameter specifiers followed by a single 
 
 Valid parameter specifiers are:
 
-- The capital letter `I` for integer
+- The capital letter `N` for number
 - The capital letter `P` for pointer
 
 Valid return specifiers are:
 
-- The capital letter `I` for integer
+- The capital letter `N` for number
 - The capital letter `P` for pointer
 - The capital letter `V` for void (none)
+
+#### Function Calls
+
+When you call a function, integer arguments are taken from subsequent positions from the r/w head's last position on the primary tape, and subsequent pointer arguments are taken from the currently active tape onwards.
+
+For example, given the following state of the abstract machine where `^` is the last position of the r/w head on that tape and `$` is the active tape:
+
+```
+ t1 01234
+     ^
+$t2 99999
+    ^
+ t3 00000
+    ^
+```
+
+Then a call to a function with the signature `ITIT` would supply the arguments `1, t2, 2, t3`.
+
+#### Returning Values
+
+If the function is specified to return a number, then the value at the current position of the r/w head is returned.
+
+If the function is specified to return a tape, then the currently-active tape is returned.
 
 ### Instructions
 
@@ -62,7 +85,25 @@ The valid instructions in vizh and their encodings are:
 - -: decrement the value pointed to by the r/w head by `1`
 - Equilateral triangle with the point at the top: read the cell pointed to by the r/w head into the r/w head storage
 - Equilateral triangle with the point at the bottom: write the value stored in r/w head storage into the cell pointed to by the r/w head
-- {<instructions>}: loop over the instructions between the braces until the value pointed to by the r/w head at the start of the loop is `0` 
+- {&lt;instructions&gt;}: loop over the instructions between the braces until the value pointed to by the r/w head at the start of the loop is `0` 
+
+When you move the r/w head up or down, the position it was last at for the previous tape is saved. E.g. given this state of the abstract where `^` is the last position of the r/w head on that tape and `$` is the active tape:
+
+```
+$t0 01234
+    ^  
+ t1 01234
+    ^
+```
+
+The sequence of instructions "right right right down" would result in this state:
+
+```
+ t0 01234
+       ^  
+$t1 01234
+    ^
+```
 
 ### Built-in Functions
 
