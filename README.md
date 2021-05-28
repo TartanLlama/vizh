@@ -1,6 +1,6 @@
 # vizh
 
-An esoteric visual language based on a multi-tape turing machine, designed for compatibility with C.
+An esoteric visual language that takes image files as input based on a multi-tape turing machine, designed for compatibility with C.
 
 Here is an implementation of `memcpy`:
 
