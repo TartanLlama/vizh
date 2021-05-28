@@ -14,7 +14,7 @@ class BuildLibv(build_py):
         c = new_compiler()
 
         # Compile libv
-        libv_objects = c.compile(['libv/strings.c'])
+        libv_objects = c.compile(['libv/io.c'])
         crtv_object = c.compile(['libv/crtv.c'])[0]
 
         # Create static libv and move crtv.o into the build dir

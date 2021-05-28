@@ -5,7 +5,9 @@ import os.path
 
 # Signatures for functions defined in libv.a
 LIBV_EXTERNS = [
-    FunctionSignature("putstr", 1, False)
+    FunctionSignature("putstr", 1, False),
+    FunctionSignature("print", 1, False), 
+    FunctionSignature("readin", 1, False)
 ]
 
 class Labels(object):
