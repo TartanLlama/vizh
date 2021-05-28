@@ -1,6 +1,6 @@
 # vizh
 
-An esoteric visual language based on a multi-tape turing machine, designed for compatibility with C.
+An esoteric visual language that takes image files as input based on a multi-tape turing machine, designed for compatibility with C.
 
 Here is an implementation of `memcpy`:
 
@@ -8,7 +8,7 @@ Here is an implementation of `memcpy`:
 
 Yes, you literally pass an image file to the compiler.
 
-**Current state: most of the compiler is implemented and you can link against C code and call it. The parser is not yet implemented, neither is the CLI driver.**
+**Current state: most of the compiler backend is implemented and you can link against C code and call it. The parser is not yet implemented, neither is the CLI driver.**
 
 ## Language
 
@@ -30,7 +30,7 @@ See [instructions](#instructions) for the valid operations on the abstract machi
 
 A vizh program consists of a number of functions, each in its own image file. (What image types are allowed? Ideally at least png and jpg)
 
-The entry point to a vizh program is a function called `main`.
+The entry point to a vizh program is a function called `main`. (Note that the `main` function gets mangled as `vizh_main`. For all other functions the symbol name is the same as the vizh name).
 
 ### Functions
 
@@ -102,26 +102,26 @@ $t1 01234
     ^
 ```
 
-### `libv`
+## Standard Library
 
 The vizh standard library is called `libv` and provides the following functions.
 
 **Current status: Only `putstr` is implemented**
 
-#### I/O
+### I/O
 
 - `readin`: read an ASCII character from stdin and write its integral representation into the cell pointed to by the r/w head
 - `print`: print the value of the cell pointed to by the r/w head to stout, interpreted as an ASCII character
 - `putstr`: write the null-terminated ASCII string starting at the position pointed to by the r/w head to stdout.
 
-#### Memory
+### Memory
 
 - `newtape`: allocate a new secondary tape underneath the last one currently allocated for this function (or the primary tape if there are no secondary tapes)
 - `freetape`: deallocate the bottom-most secondary tape for this function (no-op if there are not any)
 
-### Examples
+## Examples
 
-#### `memcopy`
+### `memcopy`
 
 ![Implementation of memcpy in vizh](samples/memcopy.png)
 
