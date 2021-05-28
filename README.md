@@ -41,13 +41,15 @@ Function signatures are a sequence of parameter specifiers followed by a single 
 Valid parameter specifiers are:
 
 - The capital letter `N` for number
-- The capital letter `P` for pointer
+- The capital letter `T` for tape
 
 Valid return specifiers are:
 
 - The capital letter `N` for number
-- The capital letter `P` for pointer
+- The capital letter `T` for tape
 - The capital letter `V` for void (none)
+
+Each vizh function has its own set of secondary tapes which initially consists of any tape arguments passed to it.
 
 #### Function Calls
 
@@ -111,8 +113,8 @@ Functions built-in to vizh are:
 
 - `readin`: read an ASCII character from stdin and write its integral representation into the cell pointed to by the r/w head
 - `print`: print the value of the cell pointed to by the r/w head to stout, interpreted as an ASCII character
-- `newtape`: allocate a new secondary tape underneath the last one currently allocated (or the primary tape if there are no secondary tapes)
-- `freetape`: deallocate the bottom-most secondary tape (no-op if there are not any)
+- `newtape`: allocate a new secondary tape underneath the last one currently allocated for this function (or the primary tape if there are no secondary tapes)
+- `freetape`: deallocate the bottom-most secondary tape for this function (no-op if there are not any)
 
 ### Examples
 
