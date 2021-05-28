@@ -30,7 +30,7 @@ See [instructions](#instructions) for the valid operations on the abstract machi
 
 A vizh program consists of a number of functions, each in its own image file. (What image types are allowed? Ideally at least png and jpg)
 
-The entry point to a vizh program is a function called `main`.
+The entry point to a vizh program is a function called `main`. (Note that the `main` function gets mangled as `vizh_main`. For all other functions the symbol name is the same as the vizh name).
 
 ### Functions
 
