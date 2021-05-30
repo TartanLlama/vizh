@@ -56,6 +56,47 @@ Well you get the best compiler errors you'll ever see:
 
 ![The errors highlighted and explained](images/compiler_error.png)
 
+## Implementation
+
+The provided implementation is called `vizh` and compiles to C and can link executables.
+
+### Installation
+
+You can install `vizh` directly from this repository:
+
+```console
+$ pip install git+https://github.com/TartanLlama/vizh.git
+```
+
+### Dependencies
+
+`vizh` depends on [OpenCV](https://opencv.org/), [cffi](https://pypi.org/project/cffi/), and [Tesseract OCR](https://tesseract-ocr.github.io/tessdoc/Home.html).
+
+You can install OpenCV and cffi with `pip`:
+
+```console
+$ pip install opencv-python cffi
+```
+
+You'll have to install Tesseract OCR separately. [See their documentation](https://tesseract-ocr.github.io/tessdoc/#tesseract-user-manual) for instructions.
+
+### Usage
+
+```
+Usage: vizh [OPTIONS] [INPUTS]...
+
+Options:
+  --version               Show the version and exit.
+  -c, --compile-only      Only compile, don't link.
+  -o, --output-file PATH  Output file for executables or vizh object files.
+  -q, --quiet             Suppress output.
+  --debug-parser          Display how the parser understands your source file.
+  --help                  Show this message and exit.
+  ```
+
+The compiler can take any combination of image files, C sources files, and object files.
+
+You may need to set the `TESSDATA_PREFIX` environment variable to the folder containing Tesseract data. If you're on Linux this is likely `/usr/share/tesseract-ocr/<version>/tessdata`.
 
 ## Language
 
@@ -167,23 +208,3 @@ The vizh standard library is called `libv` and provides the following functions.
 ### `memcopy`
 
 ![Implementation of memcpy in vizh](samples/memcopy/memcopy.png)
-
-## Implementation
-
-The provided implementation of `vizh` compiles to C and can link executables.
-
-### Usage
-
-```
-Usage: vizh [OPTIONS] [INPUTS]...
-
-Options:
-  --version               Show the version and exit.
-  -c, --compile-only      Only compile, don't link.
-  -o, --output-file PATH  Output file for executables or vizh object files.
-  -q, --quiet             Suppress output.
-  --debug-parser          Display how the parser understands your source file.
-  --help                  Show this message and exit.
-  ```
-
-  The compiler can take any combination of image files, C sources files, and object files.
