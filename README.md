@@ -33,13 +33,13 @@ int main() {
 
 We can compile this into an executable in a single command:
 
-```bash
+```console
 $ vizh memcopy.png main_memcopy.c -o memcopy
 ```
 
 Then run it:
 
-```bash
+```console
 $ ./memcopy
 Hello!
 ```
