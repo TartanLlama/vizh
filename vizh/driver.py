@@ -29,13 +29,13 @@ def get_file_types(files):
 
     return supplied_object_files, c_source_files, vizh_source_files
 
-def parse_vizh_files(compiler, files):
+def parse_vizh_files(compiler, files, debug_parser):
     vizh_funcs = []
     had_error = False
 
     for file in files:
         with vizh.parser.Parser() as parser:
-            func = parser.parse(file)
+            func = parser.parse(file, debug_parser)
             # Got list of errors
             if type(func) == list:
                 for err in func:
@@ -90,14 +90,15 @@ def get_default_output_file(compile_only, vizh_functions):
 @click.command()
 @click.version_option()
 @click.argument('inputs', nargs=-1, type=click.Path(exists=True))
-@click.option('-c', '--compile-only', 'compile_only', is_flag=True, help="only compile, don't link")
-@click.option('-o', '--output-file', 'output_file', type=click.Path(), default=None, help="output file")
-@click.option('-q', '--quiet', is_flag=True, help="suppress output")
-def entry(inputs, compile_only, output_file, quiet):
+@click.option('-c', '--compile-only', 'compile_only', is_flag=True, help="Only compile, don't link.")
+@click.option('-o', '--output-file', 'output_file', type=click.Path(), default=None, help="Output file for executables or vizh object files.")
+@click.option('-q', '--quiet', is_flag=True, help="Suppress output.")
+@click.option('--debug-parser', 'debug_parser', is_flag=True, help="Display how the parser understands your source file.")
+def entry(inputs, compile_only, output_file, quiet, debug_parser):
     supplied_object_files, c_source_files, vizh_source_files = get_file_types(inputs)
     compiler = vizh.compiler.Compiler()
     
-    vizh_funcs = parse_vizh_files(compiler, vizh_source_files)
+    vizh_funcs = parse_vizh_files(compiler, vizh_source_files, debug_parser)
     vizh_object_file = compiler.compile_functions(vizh_funcs) if vizh_funcs else None
 
     c_object_files = compile_c_files(compiler, c_source_files)
