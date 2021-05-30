@@ -153,7 +153,7 @@ The vizh standard library is called `libv` and provides the following functions.
 
 ### `memcopy`
 
-![Implementation of memcpy in vizh](samples/memcopy.png)
+![Implementation of memcpy in vizh](samples/memcopy/memcopy.png)
 
 ## Implementation
 
