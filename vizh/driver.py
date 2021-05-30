@@ -32,20 +32,14 @@ def get_file_types(files):
 def parse_vizh_files(compiler, files, debug_parser):
     vizh_funcs = []
     had_error = False
-
-    for file in files:
-        with vizh.parser.Parser() as parser:
+    
+    with vizh.parser.Parser() as parser:
+        for file in files:
             func = parser.parse(file, debug_parser)
-            # Got list of errors
-            if type(func) == list:
-                for err in func:
-                    had_error = True
-                    print(f"Error parsing {file}:", file=sys.stdout)
-                    print(file, file=sys.stdout)
-                    cv2.imshow(err.image)
-                    cv2.waitKey(0)
-            else:
+            if func:
                 vizh_funcs.append(func)
+            else:
+                had_error = True
     
     if had_error:
         return None

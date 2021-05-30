@@ -27,25 +27,85 @@ def get_function_signature(tesseract, img, threshold):
     signature = sorted(text_contours[:2], key=x_sorter)
 
     # OCR the function name
-    x, y, w, h = cv2.boundingRect(signature[0])
+    func_rect = cv2.boundingRect(signature[0])
+    x, y, w, h = func_rect
     cropped = img[y:y + h, x:x + w]
     function_name = tesseract.ocr(cropped).strip()
-    cv2.putText(img, 'Function name: ' + function_name, (x+4,y+h+20), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
 
     # OCR the number of arguments
-    x, y, w, h = cv2.boundingRect(signature[1])
+    arg_rect = cv2.boundingRect(signature[1])
+    x, y, w, h = arg_rect
     cropped = img[y:y + h, x:x + w]
     n_args = tesseract.ocr(cropped).strip()
-    cv2.putText(img, 'Arguments: ' + n_args, (x-100,y+h+20), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
-        
-    function_name_box = cv2.boundingRect(signature[0])
-    bottom_of_signature_area = function_name_box[1] + function_name_box[3]
 
-    return (bottom_of_signature_area, function_name, int(n_args))
+    return ((function_name, func_rect), (int(n_args), arg_rect))
 
 def crop_by_bounding_box(image, box):
     x,y,w,h = box
     return image[y:y+h,x:x+w]
+
+InstructionData = namedtuple('InstructionData', 'bounding_box instruction')
+
+def parse_contours(img, shape_contours, y_offset):
+    instructions = []
+    errors = []
+    for contour in shape_contours:
+        # We only care about external contours
+        if cv2.contourArea(contour, True) > 0:
+            continue
+        
+        approx = cv2.approxPolyDP(contour, 0.01* cv2.arcLength(contour, True), True)
+        points = [point.ravel() for point in approx]
+        bounding_rect = cv2.boundingRect(contour)
+        try:
+            instruction = parse_polygon(points)
+            instructions.append(InstructionData(bounding_rect, instruction))
+        except ParseError as err:
+            errors.append(ParseError(str(err), contour))
+
+    return instructions, errors
+
+def write_text(img, text, x, y): 
+    cv2.putText(img, text, (x, y), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0) )
+
+def recognise_instruction_lines(instructions):
+    # Sort the instructions by the lowest point in their symbol's bounding box
+    instructions.sort(key=lambda i: i.bounding_box[1] + i.bounding_box[3])
+
+    # Split instructions up into lines
+    lines = []
+    current_line = [instructions[0]]
+    for i1, i2 in zip(instructions, instructions[1:]):
+        if i2.bounding_box[1] > i1.bounding_box[1] + i1.bounding_box[3]:
+            lines.append(current_line)
+            current_line = []
+        current_line.append(i2)
+    lines.append(current_line)
+
+    # Sort the lines horizontally
+    for line in lines:
+        line.sort(key=lambda i: i.bounding_box[0])
+
+    return lines
+
+def decorate_and_show_image(img, lines, y_offset):
+    for line in lines:
+        # We're going to draw a box around the line, so find the min y and max x for the line
+        min_y = min(line, key=lambda i: i.bounding_box[1]).bounding_box[1]
+        max_y = line[-1].bounding_box[1] + line[-1].bounding_box[3]
+
+        # Calculate top left and bottom right points for the box, adding some padding
+        buffer_space = 15
+        top_left = (line[0].bounding_box[0]-buffer_space, min_y+y_offset-buffer_space)
+        bottom_right = (line[-1].bounding_box[0] + line[-1].bounding_box[2] + buffer_space, max_y+y_offset + buffer_space)
+
+        # Draw the box around the line and decorate every instruction with its name
+        cv2.rectangle(img, top_left, bottom_right, (250,0,0), 3)
+        for bounding_box, instruction in line:
+            write_text(img, str(instruction), bounding_box[0], min_y+y_offset)
+
+    cv2.imshow('Debug', img)
+    cv2.waitKey(0)
 
 class Parser(object):
     def __init__(self):
@@ -59,66 +119,46 @@ class Parser(object):
 
     def parse(self, img_file, debug=False):
         img = cv2.imread(img_file)
+
         # Convert the image to grayscale
         gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+
         # Binarise the image
         ret, threshold = cv2.threshold(gray, 240 , 255, cv2.CHAIN_APPROX_NONE)
-        bottom_of_signature_area, function_name, n_args = get_function_signature(self.ocr, img, threshold) 
+
+        (function_name, function_name_box), (n_args, argument_box) = get_function_signature(self.ocr, img, threshold) 
+        bottom_of_signature_area = function_name_box[1] + function_name_box[3]
+
         # Crop the image from the bottom of the signature area to get the statements area
         statements = threshold[bottom_of_signature_area:, :]
+
         # Find all shapes in the statements area
         shape_contours, shape_hierarchy = cv2.findContours(statements, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        
-        write_text = lambda img, text, x, y: cv2.putText(img, text, (x, y+bottom_of_signature_area), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0) )
-        
-        InstructionData = namedtuple('InstructionData', 'bounding_box instruction')
-        instructions = []
-        errors = []
-        for contour in shape_contours:
-            # We only care about external contours
-            if cv2.contourArea(contour, True) > 0:
-                continue
+         
+        instructions, errors = parse_contours(img, shape_contours, bottom_of_signature_area)
+        lines = recognise_instruction_lines(instructions)
             
-            approx = cv2.approxPolyDP(contour, 0.01* cv2.arcLength(contour, True), True)
-            points = [point.ravel() for point in approx]
-            bounding_rect = cv2.boundingRect(contour)
-            try:
-                instruction = parse_polygon(points)
-                instructions.append(InstructionData(bounding_rect, instruction))
-            except ParseError as err:
-                print(err, file=sys.stderr)
-                offset_bounding_rect = (bounding_rect[0], bounding_rect[1]+bottom_of_signature_area, bounding_rect[2], bounding_rect[3])
-                token = crop_by_bounding_box(img, offset_bounding_rect)
-                errors.append(ParseError(str(err), token))
-
-        # Sort the instructions by the lowest point in their symbol's bounding box
-        instructions.sort(key=lambda i: i.bounding_box[1] + i.bounding_box[3])
-        lines = []
-        current_line = [instructions[0]]
-        for i1, i2 in zip(instructions, instructions[1:]):
-            if i2.bounding_box[1] > i1.bounding_box[1] + i1.bounding_box[3]:
-                lines.append(current_line)
-                current_line = []
-            current_line.append(i2)
-        lines.append(current_line)
-        for line in lines:
-            min_y = min(line, key=lambda i: i.bounding_box[1]).bounding_box[1]
-            max_y = line[-1].bounding_box[1] + line[-1].bounding_box[3]
-            line.sort(key=lambda i: i.bounding_box[0])
-            if debug:
-                buffer_space = 15
-                top_left = (line[0].bounding_box[0]-buffer_space, min_y+bottom_of_signature_area-buffer_space)
-                bottom_right = (line[-1].bounding_box[0] + line[-1].bounding_box[2] + buffer_space, max_y+bottom_of_signature_area + buffer_space)
-                cv2.rectangle(img, top_left, bottom_right, (250,0,0), 3)
-                for bounding_box, instruction in line:
-                    write_text(img, str(instruction), bounding_box[0], min_y)
-        if debug:
-            cv2.imshow('shapes', img)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-        
         if len(errors) > 0:
-            return errors
+            print(f"Error parsing {img_file} (see image for details)", file=sys.stdout)
+            # Draw rectangles around all the bad tokens
+            for err in errors:
+                box = cv2.boundingRect(err.contour)
+                top_left = (box[0], box[1]+bottom_of_signature_area)
+                bottom_right = (box[0]+box[2], box[1]+box[3]+bottom_of_signature_area)
+                cv2.rectangle(img, top_left, bottom_right, (0,0,255), 3)
+                write_text(img, str(err), box[0], box[1] + bottom_of_signature_area - 20)
+            cv2.imshow('Debug', img)
+            cv2.waitKey(0)
+
+        if debug:
+            write_text(img, 'Function name: ' + function_name, function_name_box[0]+4, function_name_box[1]+function_name_box[3]+20)
+            write_text(img, 'Arguments: ' + str(n_args), argument_box[0]-100,argument_box[1]+argument_box[3]+20)
+            decorate_and_show_image(img, lines, bottom_of_signature_area)
+
+        cv2.destroyAllWindows()
+
+        if len(errors) > 0:
+            return None
 
         final_instructions = [data.instruction 
         for line in lines 
@@ -126,8 +166,9 @@ class Parser(object):
         return Function(FunctionSignature(function_name, n_args), final_instructions)
 
 class ParseError(Exception):
-    def __init__(self, img):
-        self.image = img
+    def __init__(self, err, contour=None):
+        super().__init__(err)
+        self.contour = contour
 
 def parse_polygon(polygon):
     # Triangle: either read or write
