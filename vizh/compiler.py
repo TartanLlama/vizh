@@ -1,14 +1,20 @@
 from vizh.ir import *
+import vizh.util
 import tempfile
 import distutils.ccompiler 
 import os.path
+import sys
+import os
 
 # Signatures for functions defined in libv.a
 LIBV_EXTERNS = [
-    FunctionSignature("putstr", 1, False),
-    FunctionSignature("print", 1, False), 
-    FunctionSignature("readin", 1, False)
+    FunctionSignature("putstr", 1),
+    FunctionSignature("print", 1), 
+    FunctionSignature("readin", 1)
 ]
+
+class CompilerError(Exception):
+    pass
 
 class Labels(object):
     """Keeps track of the stack of labels generated for a given function"""
@@ -152,9 +158,22 @@ class Compiler(object):
 
         # Write the C code out to a temporary file and compile it 
         # to an object file with the system C compiler.
-        with tempfile.NamedTemporaryFile(suffix='.c', mode = "w") as c_file:
+        c_file_name = None
+        with tempfile.NamedTemporaryFile(suffix='.c', mode = "w", delete=False) as c_file:
             c_file.write(code)
-            c_file.flush()
-            c_compiler = distutils.ccompiler.new_compiler()
-            o_file = c_compiler.compile([c_file.name], output_dir=os.path.dirname(c_file.name))
-            return o_file
+            c_file_name = c_file.name
+
+        return self.compile_c_program(c_file_name, output_dir=os.path.dirname(c_file_name))
+
+    def compile_c_program(self, file_name, output_dir):
+        c_compiler = distutils.ccompiler.new_compiler()
+
+        err_log_name = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()))
+        with vizh.util.stdchannel_redirected(sys.stdout, err_log_name) as err_file:
+            try:
+                opt_args = '/O2' if os.name == 'nt' else '-O3'
+                return c_compiler.compile([file_name], output_dir, extra_postargs=[opt_args])[0]
+            except distutils.errors.CompileError:
+                err_file.seek(0)
+                err_log = err_file.read()
+                raise CompilerError(err_log)

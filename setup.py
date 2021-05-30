@@ -19,8 +19,14 @@ class BuildLibv(build_py):
 
         # Create static libv and move crtv.o into the build dir
         output_dir = f'{self.build_lib}/vizh'
-        shutil.copyfile(crtv_object, f'{output_dir}/crtv.o')
-        c.create_static_lib(libv_objects, 'v', output_dir=output_dir)
+
+        
+        if os.name == 'nt':
+            shutil.copyfile(crtv_object, f'{output_dir}/crtv.obj')
+            c.create_static_lib(libv_objects, 'libv', output_dir=output_dir)
+        else:
+            shutil.copyfile(crtv_object, f'{output_dir}/crtv.o')
+            c.create_static_lib(libv_objects, 'v', output_dir=output_dir)
 
 setup(
     cmdclass={

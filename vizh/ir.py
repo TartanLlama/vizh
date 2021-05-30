@@ -38,21 +38,17 @@ class Instruction(object):
 
 class FunctionSignature(object):
     """Represents the signature of a function:
-    It's name, how many tape arguments it takes, and whether 
-    or not it returns a tape
+    Its name andhow many tape arguments it takes
     """
 
-    def __init__(self, name, n_args, returns_tape):
+    def __init__(self, name, n_args):
         self.name = name
         self.n_args = n_args
-        self.returns_tape = returns_tape
 
     def __str__(self):
         """Turns the signature into the equivalent C function signature"""
-
-        return_type = "char*" if self.returns_tape else "void"
         arguments = ', '.join([f'char* arg{n}' for n in range(self.n_args)])
-        return f'{return_type} {self.name} ({arguments})'
+        return f'void {self.name} ({arguments})'
 
 class Function(object):
     def __init__(self, signature, instructions):
