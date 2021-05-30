@@ -2,6 +2,8 @@
 
 An esoteric visual language that takes image files as input based on a multi-tape turing machine, designed for compatibility with C.
 
+## Overview
+
 Here is an implementation of `memcpy`:
 
 ![Implementation of memcpy in vizh](samples/memcopy/memcopy.png)
@@ -12,7 +14,7 @@ The "parser" is based on computer vision and the backend produces C code.
 
 Here's how the parser understands the program (produced if you pass `--debug-parser` when compiling):
 
-![Image decorated with the instructions that are recognised](samples/memcopy/parser_output.png)
+![Image decorated with the instructions that are recognised](images/parser_output.png)
 
 Here's a C program which calls into the function:
 
@@ -43,6 +45,17 @@ Then run it:
 $ ./memcopy
 Hello!
 ```
+
+### Errors
+
+But what if you make an error, like this?
+
+![Version of the memcopy program with some instructions changed](images/bad_memcopy.png)
+
+Well you get the best compiler errors you'll ever see:
+
+![The errors highlighted and explained](images/compiler_error.png)
+
 
 ## Language
 
