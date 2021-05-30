@@ -126,11 +126,13 @@ class TesseractOCR(object):
         self.zlib = ffi.dlopen(find_library('zlib1' if os.name == 'nt' else 'z'))
         self.leptonica = ffi.dlopen(find_library('liblept-5' if os.name == 'nt' else 'lept'))
         tess_lib = find_library('libtesseract-4' if os.name == 'nt' else 'tesseract')
-        self.tesseract = ffi.dlopen(tess)
+        self.tesseract = ffi.dlopen(tess_lib)
 
         self.api = self.tesseract.TessBaseAPICreate()
 
-        tess_data_dir = os.path.join(os.path.dirname(tess_lib), 'tessdata')
+        tess_data_dir = os.environ['TESSDATA_PREFIX'] if 'TESSDATA_PREFIX' in os.environ else None
+        # On Windows tessdata is in the same directory as the library
+        tess_data_dir = tess_data_dir or os.path.join(os.path.dirname(tess_lib), 'tessdata')
         tess_data_bytes = tess_data_dir.encode('utf-8')
         self.tesseract.TessBaseAPIInit3(self.api, tess_data_bytes, ffi.NULL)
         self.tesseract.TessBaseAPISetPageSegMode(self.api, self.tesseract.PSM_SINGLE_LINE)
