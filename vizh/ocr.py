@@ -123,10 +123,10 @@ def matToPix8(leptonica, im):
 class TesseractOCR(object):
     def __init__(self):
         pass
-        self.zlib = ffi.dlopen(find_library('zlib1'))
-        self.leptonica = ffi.dlopen(find_library('liblept-5'))
-        tess_lib = find_library('libtesseract-4')
-        self.tesseract = ffi.dlopen(find_library('libtesseract-4'))
+        self.zlib = ffi.dlopen(find_library('zlib1' if os.name == 'nt' else 'z'))
+        self.leptonica = ffi.dlopen(find_library('liblept-5' if os.name == 'nt' else 'lept'))
+        tess_lib = find_library('libtesseract-4' if os.name == 'nt' else 'tesseract')
+        self.tesseract = ffi.dlopen(tess)
 
         self.api = self.tesseract.TessBaseAPICreate()
 
