@@ -50,6 +50,9 @@ class FunctionSignature(object):
         arguments = ', '.join([f'char* arg{n}' for n in range(self.n_args)])
         return f'void {self.name} ({arguments})'
 
+    def __repr__(self):
+        return f'FunctionSignature("{self.name}", {self.n_args})'
+
 class Function(object):
     def __init__(self, signature, instructions):
         self.signature = signature

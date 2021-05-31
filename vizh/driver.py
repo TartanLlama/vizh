@@ -15,7 +15,7 @@ def find_if(l, pred):
         return None
 
 def get_file_types(files):
-    supplied_object_files = []
+    object_files = []
     c_source_files = []
     vizh_source_files = []
 
@@ -23,11 +23,11 @@ def get_file_types(files):
         if file.endswith('.c'):
             c_source_files.append(file)
         elif file.endswith('.o') or file.endswith('.obj'):
-            supplied_object_files.append(file)
+            object_files.append(file)
         else:
             vizh_source_files.append(file)
 
-    return supplied_object_files, c_source_files, vizh_source_files
+    return object_files, c_source_files, vizh_source_files
 
 def parse_vizh_files(compiler, files, debug_parser):
     vizh_funcs = []
@@ -50,13 +50,11 @@ def compile_c_files(compiler, files):
     object_files = []
     had_error = False
 
-    for file in files:
-        try:
-            object_file = compiler.compile_c_program(file, tempfile.gettempdir())
-            object_files.append(object_file)
-        except vizh.compiler.CompilerError as err:
-            had_error = True
-            print(f'C compiler reported an error in compiling {file}:\n{err}', file=sys.stderr)
+    try:
+        object_files = compiler.compile_c_programs(files, tempfile.gettempdir())
+    except vizh.compiler.CompilerError as err:
+        had_error = True
+        print(f'C compiler reported an error in compiling {files}:\n{err}', file=sys.stderr)
 
     if had_error:
         return None
@@ -124,7 +122,15 @@ def entry(inputs, compile_only, output_file, quiet, debug_parser):
 
     object_files = supplied_object_files + c_object_files + [vizh_object_file]
     linker = vizh.linker.Linker()
-    link_crtv = find_if(vizh_funcs, lambda f: f.signature.name == 'main') != None
-    linker.link(object_files, output_file, link_crtv)
-    if not quiet:
-        print(vizh_source_files + c_source_files + supplied_object_files, '->', output_file)
+    link_crtv = find_if(vizh_funcs, lambda f: f.signature.name == 'vizh_main') != None
+
+    try:
+        linker.link(object_files, output_file, link_crtv)
+
+        if not quiet:
+            print(vizh_source_files + c_source_files + supplied_object_files, '->', output_file)
+    except vizh.linker.LinkerError as err:
+            print(f'C compiler reported an error in linking:\n{err}', file=sys.stderr)
+
+if __name__ == '__main__':
+    entry()

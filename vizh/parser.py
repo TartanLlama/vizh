@@ -7,63 +7,11 @@ import sys
 from collections import namedtuple
 import itertools
 
-def get_function_signature(tesseract, img, threshold):
-    # We want to find largeish rectangles of text
-    rect_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (18, 18))
-  
-    # Dilate the image so that characters in the token aren't separated
-    dilation = cv2.dilate(threshold, rect_kernel, iterations = 1)
-
-    # Finding contours
-    text_contours, text_hierarchy = cv2.findContours(dilation, cv2.RETR_EXTERNAL, 
-                                                     cv2.CHAIN_APPROX_NONE)
-
-    # Sort to find the two contours closest to the top of the image
-    y_sorter = lambda c: cv2.boundingRect(c)[1]
-    text_contours.sort(reverse=False, key=y_sorter)
-
-    # Sort by x to have the first element be the function name and the second be the number of args
-    x_sorter = lambda c: cv2.boundingRect(c)[0]
-    signature = sorted(text_contours[:2], key=x_sorter)
-
-    # OCR the function name
-    func_rect = cv2.boundingRect(signature[0])
-    x, y, w, h = func_rect
-    cropped = img[y:y + h, x:x + w]
-    function_name = tesseract.ocr(cropped).strip()
-
-    # OCR the number of arguments
-    arg_rect = cv2.boundingRect(signature[1])
-    x, y, w, h = arg_rect
-    cropped = img[y:y + h, x:x + w]
-    n_args = tesseract.ocr(cropped).strip()
-
-    return ((function_name, func_rect), (int(n_args), arg_rect))
-
 def crop_by_bounding_box(image, box):
     x,y,w,h = box
     return image[y:y+h,x:x+w]
 
 InstructionData = namedtuple('InstructionData', 'bounding_box instruction')
-
-def parse_contours(img, shape_contours, y_offset):
-    instructions = []
-    errors = []
-    for contour in shape_contours:
-        # We only care about external contours
-        if cv2.contourArea(contour, True) > 0:
-            continue
-        
-        approx = cv2.approxPolyDP(contour, 0.01* cv2.arcLength(contour, True), True)
-        points = [point.ravel() for point in approx]
-        bounding_rect = cv2.boundingRect(contour)
-        try:
-            instruction = parse_polygon(points)
-            instructions.append(InstructionData(bounding_rect, instruction))
-        except ParseError as err:
-            errors.append(ParseError(str(err), contour))
-
-    return instructions, errors
 
 def write_text(img, text, x, y): 
     cv2.putText(img, text, (x, y), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0) )
@@ -117,6 +65,107 @@ class Parser(object):
     def __exit__(self, exception_type, exception_value, exception_traceback):
         self.ocr.__exit__(exception_type, exception_value, exception_traceback)
 
+    def parse_function_signature(self, img, threshold):
+        # We want to find largeish rectangles of text
+        rect_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (18, 18))
+    
+        # Dilate the image so that characters in the token aren't separated
+        dilation = cv2.dilate(threshold, rect_kernel, iterations = 1)
+
+        # Finding contours
+        text_contours, text_hierarchy = cv2.findContours(dilation, cv2.RETR_EXTERNAL, 
+                                                         cv2.CHAIN_APPROX_NONE)
+
+        # Sort to find the two contours closest to the top of the image
+        y_sorter = lambda c: cv2.boundingRect(c)[1]
+        text_contours.sort(reverse=False, key=y_sorter)
+
+        # Sort by x to have the first element be the function name and the second be the number of args
+        x_sorter = lambda c: cv2.boundingRect(c)[0]
+        signature = sorted(text_contours[:2], key=x_sorter)
+
+        # OCR the function name
+        func_rect = cv2.boundingRect(signature[0])
+        function_name = self.ocr.ocr(crop_by_bounding_box(img,func_rect)).strip()
+
+        # OCR the number of arguments
+        arg_rect = cv2.boundingRect(signature[1])
+        n_args = self.ocr.ocr(crop_by_bounding_box(img,arg_rect)).strip()
+
+        return ((function_name, func_rect), (int(n_args), arg_rect))
+
+    def parse_contours(self, img, shape_contours):
+        instructions = []
+        errors = []
+        for contour in shape_contours:
+            approx = cv2.approxPolyDP(contour, 0.01* cv2.arcLength(contour, True), True)
+            points = [point.ravel() for point in approx]
+            bounding_rect = cv2.boundingRect(contour)
+            try:
+                instruction = self.parse_polygon(img, contour, points)
+                if instruction:
+                    instructions.append(InstructionData(bounding_rect, instruction))
+            except ParseError as err:
+                errors.append(ParseError(str(err), contour))
+
+        return instructions, errors
+
+    def parse_polygon(self, img, contour, polygon):
+        # Triangle: either read or write
+        if len(polygon) == 3:
+            direction = detect_direction(polygon, slope_angle=30)
+            if direction == ArrowDirection.UP:
+                return Instruction(InstructionType.READ)
+            if direction == ArrowDirection.DOWN:
+                return Instruction(InstructionType.WRITE)
+            raise ParseError("Found a triangle, but not sure what direction it's pointing")
+
+        # Minus sign: decrement
+        elif len(polygon) == 4:
+            symbol = crop_by_bounding_box(img, cv2.boundingRect(contour))
+            internal_contours, _ = cv2.findContours(symbol, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+            # If there are more than 2 contours then this is a comment: ignore it
+            if len(internal_contours) > 2:
+                return None
+            else:
+                return Instruction(InstructionType.DEC)
+
+        # Brace: either loop start or end
+        elif len(polygon) == 6:
+            # Check all pairs of adjacent points
+            lines = zip(polygon, rotate(polygon,1))
+            longest_vertical_line = max(lines, key=lambda p: abs(p[1][1] - p[0][1]))
+            leftmost_point = min(polygon, key=lambda p: p[0])
+
+            if min(longest_vertical_line[0][0], longest_vertical_line[1][0]) > leftmost_point[0]:
+                return Instruction(InstructionType.LOOP_END)
+            else:    
+                return Instruction(InstructionType.LOOP_START)
+
+        # Arrow: either up, down, left, or right
+        elif len(polygon) == 7:
+            direction = detect_direction(polygon, slope_angle=45)
+            if direction == ArrowDirection.UNKNOWN:
+                raise ParseError("Found an arrow, but not sure what direction it's pointing")
+            return Instruction(direction.instruction_type())
+
+        # Plus: increment
+        elif len(polygon) == 8:
+            return Instruction(InstructionType.INC)
+
+        # Probably a circle, look for a function call
+        elif len(polygon) > 10:
+            # Draw over the circle to remove it before OCRing
+            cv2.drawContours(img, [contour], 0, (0,0,0), 10)
+            function_image = crop_by_bounding_box(img, cv2.boundingRect(contour))
+            function_name = self.ocr.ocr(function_image).strip()
+            
+            if function_name == '':
+                raise ParseError("Found a circle, but couldn't parse a function name inside it")
+            return Instruction(InstructionType.CALL, function_name)
+
+        raise ParseError("Didn't recognise the instruction")
+
     def parse(self, img_file, debug=False):
         img = cv2.imread(img_file)
 
@@ -126,16 +175,16 @@ class Parser(object):
         # Binarise the image
         ret, threshold = cv2.threshold(gray, 240 , 255, cv2.CHAIN_APPROX_NONE)
 
-        (function_name, function_name_box), (n_args, argument_box) = get_function_signature(self.ocr, img, threshold) 
-        bottom_of_signature_area = function_name_box[1] + function_name_box[3]
+        (function_name, function_name_box), (n_args, argument_box) = self.parse_function_signature(img, threshold) 
+        bottom_of_signature_area = max(function_name_box[1] + function_name_box[3], argument_box[1] + argument_box[3])
 
         # Crop the image from the bottom of the signature area to get the statements area
         statements = threshold[bottom_of_signature_area:, :]
-
+        
         # Find all shapes in the statements area
-        shape_contours, shape_hierarchy = cv2.findContours(statements, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-         
-        instructions, errors = parse_contours(img, shape_contours, bottom_of_signature_area)
+        shape_contours, _ = cv2.findContours(statements, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        instructions, errors = self.parse_contours(statements, shape_contours)
         lines = recognise_instruction_lines(instructions)
             
         if len(errors) > 0:
@@ -169,46 +218,6 @@ class ParseError(Exception):
     def __init__(self, err, contour=None):
         super().__init__(err)
         self.contour = contour
-
-def parse_polygon(polygon):
-    # Triangle: either read or write
-    if len(polygon) == 3:
-        direction = detect_direction(polygon, slope_angle=30)
-        if direction == ArrowDirection.UP:
-            return Instruction(InstructionType.READ)
-        if direction == ArrowDirection.DOWN:
-            return Instruction(InstructionType.WRITE)
-        raise ParseError("Found a triangle, but not sure what direction it's pointing")
-
-        
-    # Minus sign: decrement
-    elif len(polygon) == 4:
-        return Instruction(InstructionType.DEC)
-
-    # Arrow: either up, down, left, or right
-    elif len(polygon) == 7:
-        direction = detect_direction(polygon, slope_angle=45)
-        if direction == ArrowDirection.UNKNOWN:
-            raise ParseError("Found an arrow, but not sure what direction it's pointing")
-        return Instruction(direction.instruction_type())
-    
-    # Brace: either loop start or end
-    elif len(polygon) == 6:
-        # Check all pairs of adjacent points
-        lines = zip(polygon, rotate(polygon,1))
-        longest_vertical_line = max(lines, key=lambda p: abs(p[1][1] - p[0][1]))
-        leftmost_point = min(polygon, key=lambda p: p[0])
-
-        if min(longest_vertical_line[0][0], longest_vertical_line[1][0]) > leftmost_point[0]:
-            return Instruction(InstructionType.LOOP_END)
-        else:    
-            return Instruction(InstructionType.LOOP_START)
-    
-    # Plus: increment
-    elif len(polygon) == 8:
-        return Instruction(InstructionType.INC)
-
-    raise ParseError("Didn't recognise the instruction")
 
 class ArrowDirection(Enum):
     LEFT = auto()

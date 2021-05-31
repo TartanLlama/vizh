@@ -6,12 +6,15 @@ import os.path
 import sys
 import os
 
-# Signatures for functions defined in libv.a
-LIBV_EXTERNS = [
-    FunctionSignature("putstr", 1),
-    FunctionSignature("print", 1), 
-    FunctionSignature("readin", 1)
-]
+libv_decls = []
+try:
+    # This is generated when the package is built
+    # and contains declarations for libv
+    import vizh.libv_decls
+    libv_decls = vizh.libv_decls.libv_decls
+except ImportError:
+    # If we're compiling libv itself then it doesn't exist yet
+    pass
 
 class CompilerError(Exception):
     pass
@@ -32,7 +35,8 @@ class Labels(object):
         return self.stack.pop()
 
 class Compiler(object):
-    def __init__(self):
+    def __init__(self, c_compiler=None):
+        self.c_compiler = c_compiler or distutils.ccompiler.new_compiler()
         pass
 
     def emit_prologue(self, function):
@@ -140,7 +144,7 @@ class Compiler(object):
             if function.signature.name == "main":
                 function.signature.name = "vizh_main"
 
-        signature_list = LIBV_EXTERNS + externs + [function.signature for function in functions]
+        signature_list = libv_decls + externs + [function.signature for function in functions]
         signatures = {signature.name: signature for signature in signature_list}
         
         # We need size_t
@@ -163,16 +167,14 @@ class Compiler(object):
             c_file.write(code)
             c_file_name = c_file.name
 
-        return self.compile_c_program(c_file_name, output_dir=os.path.dirname(c_file_name))
+        return self.compile_c_programs([c_file_name], output_dir=os.path.dirname(c_file_name))[0]
 
-    def compile_c_program(self, file_name, output_dir):
-        c_compiler = distutils.ccompiler.new_compiler()
-
+    def compile_c_programs(self, file_names, output_dir):
         err_log_name = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()))
         with vizh.util.stdchannel_redirected(sys.stdout, err_log_name) as err_file:
             try:
                 opt_args = '/O2' if os.name == 'nt' else '-O3'
-                return c_compiler.compile([file_name], output_dir, extra_postargs=[opt_args])[0]
+                return self.c_compiler.compile(file_names, output_dir, extra_postargs=[opt_args])
             except distutils.errors.CompileError:
                 err_file.seek(0)
                 err_log = err_file.read()
