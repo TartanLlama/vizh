@@ -29,16 +29,16 @@ def find_libv_files(path):
     return c_files, vizh_files, crtv_file
 
 #WHEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
-cdecl_regex = re.compile("^void ([a-zA-Z0-9]+)\(((?:char\*(?: [a-zA-Z0-9]+)?(?:, )?)*)\);$")
+cdecl_regex = re.compile("^void ([a-zA-Z0-9]+)\(((?:uint8_t\*(?: [a-zA-Z0-9]+)?(?:, )?)*)\);$")
 def parse_c_declaration(decl):
     #PARSING C WITH REGEX LIKE A HEATHEN
-    #This is actually somewhat reasonable because libv functions only return void and take char*s
+    #This is actually somewhat reasonable because libv functions only return void and take uint8_t*s
 
     groups = re.match(cdecl_regex, decl)
     if not groups:
         return None
     function_name = groups[1]
-    n_args = groups[2].count('char*')
+    n_args = groups[2].count('uint8_t*')
     return vizh.ir.FunctionSignature(function_name, n_args)
 
 def parse_vizh_files(files):
@@ -50,7 +50,8 @@ def parse_vizh_files(files):
 
 def write_libv_vizh_header(vizh_funcs, output_dir):
     """Write a C header with the declarations of the libv functions written in vizh"""
-    libv_vizh_header = '\n'.join([str(func.signature)+';' for func in vizh_funcs])
+    libv_vizh_header = '#include <stdint.h>'
+    libv_vizh_header += '\n'.join([str(func.signature)+';' for func in vizh_funcs])
     with open(os.path.join(output_dir, LIBV_VIZH_HEADER_NAME), 'w') as header_file:
         header_file.write(libv_vizh_header) 
 

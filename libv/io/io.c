@@ -1,8 +1,9 @@
 #include <stdio.h>
-void readin(char* c) {
+#include <stdint.h>
+void readin(uint8_t* c) {
     *c = getchar();
 }
 
-void print(char* c) {
+void print(uint8_t* c) {
     putchar(*c);
 }

@@ -47,7 +47,7 @@ class FunctionSignature(object):
 
     def __str__(self):
         """Turns the signature into the equivalent C function signature"""
-        arguments = ', '.join([f'char* arg{n}' for n in range(self.n_args)])
+        arguments = ', '.join([f'uint8_t* arg{n}' for n in range(self.n_args)])
         return f'void {self.name} ({arguments})'
 
     def __repr__(self):

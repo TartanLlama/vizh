@@ -21,12 +21,12 @@ Here's a C program which calls into the function:
 ```c
 #include <stdio.h>
 // Supplied by linking with the vizh object file
-void memcopy(char*,char*,char*);
+void memcopy(uint8_t*,uint8_t*,uint8_t*);
 
 int main() {
-    char str[] = "Hello!";
-    char size = sizeof(str);
-    char to[sizeof(str)];
+    uint8_t str[] = "Hello!";
+    uint8_t size = sizeof(str);
+    uint8_t to[sizeof(str)];
 
     memcopy(&size, str, to);
     puts(to);

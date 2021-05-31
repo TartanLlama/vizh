@@ -44,8 +44,8 @@ class Compiler(object):
 
         It looks like this:
 
-        void getA(char* arg0) {
-           char* static_tapes[1] = {
+        void getA(uint8_t* arg0) {
+           uint8_t* static_tapes[1] = {
              arg0
            };
            vizh_tapes_t vizh_tapes;
@@ -53,12 +53,12 @@ class Compiler(object):
            vizh_tapes.n_tapes = 1;
            vizh_tapes.capacity = 0;
            size_t current_tape = 0;
-           char head_storage = 0;
+           uint8_t head_storage = 0;
         """
 
         return [
             str(function.signature) + ' {',
-            f'  char* static_tapes[{function.signature.n_args}] = {{ ',
+            f'  uint8_t* static_tapes[{function.signature.n_args}] = {{ ',
             '    ' + ', '.join([f'arg{n}' for n in range(function.signature.n_args)]),
             '  };',
             '  vizh_tapes_t vizh_tapes;',
@@ -66,7 +66,7 @@ class Compiler(object):
             f'  vizh_tapes.n_tapes = {function.signature.n_args}; ',
             '  vizh_tapes.capacity = 0;',
             '  size_t current_tape = 0;',
-            '  char head_storage = 0;',
+            '  uint8_t head_storage = 0;',
         ]
         
 
