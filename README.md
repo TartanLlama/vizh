@@ -186,9 +186,13 @@ $t1 01234
     ^
 ```
 
+### Comments 
+
+Comments in vizh are anything enclosed in a rectangle. Stick what you want in there.
+
 ## Standard Library
 
-The vizh standard library is called `libv` and provides the following functions.
+The vizh standard library is called `libv`. Much of it is implemented in vizh itself and it is built when you install `vizh`. It provides the following functions:
 
 ### I/O
 
@@ -196,9 +200,18 @@ The vizh standard library is called `libv` and provides the following functions.
 - `print`: print the value of the cell pointed to by the r/w head to stout, interpreted as an ASCII character
 - `putstr`: write the null-terminated ASCII string starting at the position pointed to by the r/w head to stdout.
 
-### Memory
+### Strings
 
-**These are not yet implemented**
+- `geta`: puts the character `a` at the current position of the r/w head.
+- `getA`: puts the character `A` at the current position of the r/w head.
+
+### Arithmetic
+
+- `add` given tape cells `a,b` from the r/w head, results in `a+b,0`.
+- `mul` given tape cells `a,b,c` from the r/w head, results in `a*b,0,0`.
+- `zero` given tape cell `a` from the r/w head, results in `0`
+
+### Memory
 
 - `newtape`: allocate a new secondary tape underneath the last one currently allocated for this function (or the primary tape if there are no secondary tapes)
 - `freetape`: deallocate the bottom-most secondary tape for this function (no-op if there are not any)
