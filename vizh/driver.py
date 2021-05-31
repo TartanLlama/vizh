@@ -91,7 +91,12 @@ def entry(inputs, compile_only, output_file, quiet, debug_parser):
     compiler = vizh.compiler.Compiler()
     
     vizh_funcs = parse_vizh_files(compiler, vizh_source_files, debug_parser)
-    vizh_object_file = compiler.compile_functions(vizh_funcs) if vizh_funcs else None
+    vizh_object_file = None
+    try:
+        vizh_object_file = compiler.compile_functions(vizh_funcs) if vizh_funcs else None
+    except vizh.compiler.CompilerError as err:
+        print(err)
+        return -1
 
     c_object_files = compile_c_files(compiler, c_source_files)
     

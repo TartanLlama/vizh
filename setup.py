@@ -11,6 +11,7 @@ import sys
 # Disgusting.
 sys.path = ['.'] + sys.path
 import vizh.libv
+sys.path = sys.path[1:]
 
 build_dir = os.path.join(os.path.dirname(__file__), 'build')
 

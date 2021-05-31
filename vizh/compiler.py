@@ -44,49 +44,60 @@ class Compiler(object):
 
         It looks like this:
 
-        void function_name (char* arg0, char* arg1) {
-            char* tapes[1] = {
-                arg0, arg1
-            };
-            size_t current_tape = 0;
-            char head_storage = 0;
+        void getA(char* arg0) {
+           char* static_tapes[1] = {
+             arg0
+           };
+           vizh_tapes_t vizh_tapes;
+           vizh_tapes.tapes = static_tapes;
+           vizh_tapes.n_tapes = 1;
+           vizh_tapes.capacity = 0;
+           size_t current_tape = 0;
+           char head_storage = 0;
         """
 
-        code = []
-        code.append(str(function.signature) + ' {')
-        code.append(f'  char* tapes[{function.signature.n_args}] = {{')
-        code.append('    ' + ', '.join([f'arg{n}' for n in range(function.signature.n_args)]))
-        code.append('  };')
-        code.append('  size_t current_tape = 0;')
-        code.append('  char head_storage = 0;')
-        return code
+        return [
+            str(function.signature) + ' {',
+            f'  char* static_tapes[{function.signature.n_args}] = {{ ',
+            '    ' + ', '.join([f'arg{n}' for n in range(function.signature.n_args)]),
+            '  };',
+            '  vizh_tapes_t vizh_tapes;',
+            '  vizh_tapes.tapes = static_tapes;',
+            f'  vizh_tapes.n_tapes = {function.signature.n_args}; ',
+            '  vizh_tapes.capacity = 0;',
+            '  size_t current_tape = 0;',
+            '  char head_storage = 0;',
+        ]
+        
 
     def emit_epilogue(self, function):
-        """The epilogue tears down the function.
-
-        Currently it does nothing, but this should handle returning tapes and 
-        deallocating any additional tapes allocated in this function.
+        """The epilogue tears down the function, deallocating any leftover tapes.
         """
-        return ['}']
+        return [
+            f'  for(size_t i = 0; i < vizh_tapes.n_tapes - {function.signature.n_args}; ++i) {{',
+            '    freetape(&vizh_tapes);',
+            '  }',
+            '}',
+        ]
 
     def emit_instruction(self, instruction, labels, signatures):
         code = []
         if instruction.type == InstructionType.LEFT:
-            code = ['  --tapes[current_tape];']
+            code = ['  --vizh_tapes.tapes[current_tape];']
         elif instruction.type == InstructionType.RIGHT:
-            code = ['  ++tapes[current_tape];']
+            code = ['  ++vizh_tapes.tapes[current_tape];']
         elif instruction.type == InstructionType.UP:
             code = ['  --current_tape;']
         elif instruction.type == InstructionType.DOWN:
             code = ['  ++current_tape;']
         elif instruction.type == InstructionType.INC:
-            code = ['  ++*tapes[current_tape];']
+            code = ['  ++*vizh_tapes.tapes[current_tape];']
         elif instruction.type == InstructionType.DEC:
-            code = ['  --*tapes[current_tape];']
+            code = ['  --*vizh_tapes.tapes[current_tape];']
         elif instruction.type == InstructionType.READ:
-            code = ['  head_storage = *tapes[current_tape];']
+            code = ['  head_storage = *vizh_tapes.tapes[current_tape];']
         elif instruction.type == InstructionType.WRITE:
-            code = ['  *tapes[current_tape] = head_storage;']
+            code = ['  *vizh_tapes.tapes[current_tape] = head_storage;']
 
         # Loops are implemented by outputting a start label
         # where the LOOP_START instruction is, then checking
@@ -96,7 +107,7 @@ class Compiler(object):
             new_label = labels.generate_label()
             code = [
                 f'{new_label}_start:',
-                f'  if (*tapes[current_tape] == 0) goto {new_label}_end;'
+                f'  if (*vizh_tapes.tapes[current_tape] == 0) goto {new_label}_end;'
             ]
         elif instruction.type == InstructionType.LOOP_END:
             label = labels.pop_label()
@@ -108,10 +119,18 @@ class Compiler(object):
         # Function calls will fulfil arguments from the tape which
         # is currently active.
         elif instruction.type == InstructionType.CALL:
-            callee_signature = signatures[instruction.value]
-            code = [f'  {instruction.value}(']
-            code += [f'    tapes[current_tape + {arg}]' for arg in range(callee_signature.n_args) ] 
-            code += ['  );']
+            # Creating or destroying tapes requires having access to our tapes
+            if instruction.value == 'newtape':
+                code = ['  newtape(&vizh_tapes);']
+            elif instruction.value == 'freetape':
+                code = ['  freetape(&vizh_tapes);']
+            else:
+                if instruction.value not in signatures:
+                    raise CompilerError(f'Unrecognised function call: {instruction.value}')
+                callee_signature = signatures[instruction.value]
+                code = [f'  {instruction.value}(']
+                code += [f'    vizh_tapes.tapes[current_tape + {arg}]' for arg in range(callee_signature.n_args) ] 
+                code += ['  );']
 
         return (code, labels)
         
@@ -144,16 +163,28 @@ class Compiler(object):
             if function.signature.name == "main":
                 function.signature.name = "vizh_main"
 
-        signature_list = libv_decls + externs + [function.signature for function in functions]
-        signatures = {signature.name: signature for signature in signature_list}
+        signature_list = externs + [function.signature for function in functions]
         
-        # We need size_t
-        code = ['#include <stddef.h>']
+        # We need size_t and libv functions
+        code = ['#include <stddef.h>',
+                '#include "libv.h"']
 
-        # First output forward declarations for all functions and externs (including libv)
+        # First output forward declarations for all functions and externs
         code += [f'{str(signature)};' for signature in signature_list]
 
-        code += [self.compile_function_to_c(function, signatures) for function in functions]
+        signature_list += libv_decls
+        signatures = {signature.name: signature for signature in signature_list}
+
+        errors = []
+        for function in functions:
+            try:
+                code.append(self.compile_function_to_c(function, signatures))
+            except CompilerError as err:
+                errors.append((function.signature.name,err))
+
+        if len(errors) > 0:
+            messages = [f'Error while compiling {func_name}: {err}' for func_name, err in errors]
+            raise CompilerError('\n'.join(messages))
         
         return '\n'.join(code)
 
@@ -170,11 +201,14 @@ class Compiler(object):
         return self.compile_c_programs([c_file_name], output_dir=os.path.dirname(c_file_name))[0]
 
     def compile_c_programs(self, file_names, output_dir):
+        # If we're compiling the standard library then the libv header is in ./libv, otherwise it's where this file is
+        libv_header_path = 'libv' if libv_decls == [] else os.path.dirname(__file__)
+
         err_log_name = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()))
         with vizh.util.stdchannel_redirected(sys.stdout, err_log_name) as err_file:
             try:
                 opt_args = '/O2' if os.name == 'nt' else '-O3'
-                return self.c_compiler.compile(file_names, output_dir, extra_postargs=[opt_args])
+                return self.c_compiler.compile(file_names, output_dir, extra_postargs=[opt_args], include_dirs=[libv_header_path])
             except distutils.errors.CompileError:
                 err_file.seek(0)
                 err_log = err_file.read()

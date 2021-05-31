@@ -17,7 +17,7 @@ def find_libv_files(path):
     vizh_files = []
     crtv_file = None
 
-    for file in glob.glob(path + '/*'):
+    for file in glob.glob(path + '/**', recursive=True):
         if file.endswith('.c'):
             if file.endswith('crtv.c'):
                 crtv_file = file

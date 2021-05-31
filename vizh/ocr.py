@@ -136,7 +136,7 @@ class TesseractOCR(object):
         tess_data_bytes = tess_data_dir.encode('utf-8')
         self.tesseract.TessBaseAPIInit3(self.api, tess_data_bytes, ffi.NULL)
         self.tesseract.TessBaseAPISetPageSegMode(self.api, self.tesseract.PSM_SINGLE_LINE)
-        self.tesseract.TessBaseAPISetVariable(self.api, "user_defined_dpi".encode('utf-8'), "300".encode('utf-8'))
+        self.tesseract.TessBaseAPISetVariable(self.api, "user_defined_dpi".encode('utf-8'), "70".encode('utf-8'))
     
     def __enter__(self):
         return self
