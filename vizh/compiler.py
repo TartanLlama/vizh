@@ -51,6 +51,7 @@ class Compiler(object):
            vizh_tapes_t vizh_tapes;
            vizh_tapes.tapes = static_tapes;
            vizh_tapes.n_tapes = 1;
+           vizh_tapes.to_free = NULL;
            vizh_tapes.capacity = 0;
            size_t current_tape = 0;
            uint8_t head_storage = 0;
@@ -64,6 +65,7 @@ class Compiler(object):
             '  vizh_tapes_t vizh_tapes;',
             '  vizh_tapes.tapes = static_tapes;',
             f'  vizh_tapes.n_tapes = {function.signature.n_args}; ',
+            '  vizh_tapes.to_free = NULL;'
             '  vizh_tapes.capacity = 0;',
             '  size_t current_tape = 0;',
             '  uint8_t head_storage = 0;',
@@ -129,7 +131,7 @@ class Compiler(object):
                     raise CompilerError(f'Unrecognised function call: {instruction.value}')
                 callee_signature = signatures[instruction.value]
                 code = [f'  {instruction.value}(']
-                code += [f'    vizh_tapes.tapes[current_tape + {arg}]' for arg in range(callee_signature.n_args) ] 
+                code += [',\n'.join([f'    vizh_tapes.tapes[current_tape + {arg}]' for arg in range(callee_signature.n_args) ])] 
                 code += ['  );']
 
         return (code, labels)

@@ -158,8 +158,9 @@ class Parser(object):
             # Draw over the circle to remove it before OCRing
             cv2.drawContours(img, [contour], 0, (0,0,0), 10)
             function_image = crop_by_bounding_box(img, cv2.boundingRect(contour))
-            function_name = self.ocr.ocr(function_image).strip()
-            
+            # Inverting first helps OCR
+            inverse_function_image = cv2.bitwise_not(function_image)
+            function_name = self.ocr.ocr(inverse_function_image).strip()
             if function_name == '':
                 raise ParseError("Found a circle, but couldn't parse a function name inside it")
             return Instruction(InstructionType.CALL, function_name)

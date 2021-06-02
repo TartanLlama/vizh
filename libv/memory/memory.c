@@ -13,12 +13,20 @@ void newtape(vizh_tapes_t* tapes) {
 
         tapes->tapes = new_tapes; 
         tapes->tapes[tapes->n_tapes] = (uint8_t*)malloc(TAPE_SIZE);
+        memset(tapes->tapes[tapes->n_tapes], 0, TAPE_SIZE);
+
+        tapes->to_free = (uint8_t**)malloc(sizeof(uint8_t*) * tapes->capacity);
+        memset(tapes->to_free, NULL, tapes->n_tapes);
+        tapes->to_free[tapes->n_tapes] = tapes->tapes[tapes->n_tapes];
+
         ++tapes->n_tapes;
     }
 
     // Otherwise, if there's enough capacity, create a new tape
     else if (tapes->n_tapes < tapes->capacity) {
         tapes->tapes[tapes->n_tapes] = (uint8_t*)malloc(TAPE_SIZE);
+        memset(tapes->tapes[tapes->n_tapes], 0, TAPE_SIZE);
+        tapes->to_free[tapes->n_tapes] = tapes->tapes[tapes->n_tapes];
         ++tapes->n_tapes;
     }
 
@@ -27,11 +35,13 @@ void newtape(vizh_tapes_t* tapes) {
         tapes->capacity *= 2;
         tapes->tapes = (uint8_t**)realloc(tapes->tapes, tapes->capacity * sizeof(uint8_t*));
         tapes->tapes[tapes->n_tapes] = (uint8_t*)malloc(TAPE_SIZE);
+        memset(tapes->tapes[tapes->n_tapes], 0, TAPE_SIZE);
+        tapes->to_free[tapes->n_tapes] = tapes->tapes[tapes->n_tapes];
         ++tapes->n_tapes;
     }
 }
 
 void freetape(vizh_tapes_t* tapes) {
     --tapes->n_tapes;
-    free(tapes->tapes[tapes->n_tapes]);
+    free(tapes->to_free[tapes->n_tapes]);
 }

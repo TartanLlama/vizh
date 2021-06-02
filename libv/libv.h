@@ -9,6 +9,7 @@ typedef struct {
     size_t n_tapes; 
     size_t capacity; 
     uint8_t** tapes;
+    uint8_t** to_free;
 } vizh_tapes_t;
 
 void readin(uint8_t* c);
