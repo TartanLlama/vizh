@@ -50,7 +50,7 @@ def parse_vizh_files(files):
 
 def write_libv_vizh_header(vizh_funcs, output_dir):
     """Write a C header with the declarations of the libv functions written in vizh"""
-    libv_vizh_header = '#include <stdint.h>'
+    libv_vizh_header = '#include <stdint.h>\n'
     libv_vizh_header += '\n'.join([str(func.signature)+';' for func in vizh_funcs])
     with open(os.path.join(output_dir, LIBV_VIZH_HEADER_NAME), 'w') as header_file:
         header_file.write(libv_vizh_header) 
