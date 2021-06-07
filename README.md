@@ -6,7 +6,7 @@ An esoteric visual language that takes image files as input based on a multi-tap
 
 Here is an implementation of `memcpy`:
 
-![Implementation of memcpy in vizh](samples/memcopy/memcopy.png)
+![Implementation of memcpy in vizh](images/memcopy.png)
 
 Yes, you literally pass an image file to the compiler.
 
@@ -215,9 +215,3 @@ The vizh standard library is called `libv`. Much of it is implemented in vizh it
 
 - `newtape`: allocate a new secondary tape underneath the last one currently allocated for this function (or the primary tape if there are no secondary tapes)
 - `freetape`: deallocate the bottom-most secondary tape for this function (no-op if there are not any)
-
-## Examples
-
-### `memcopy`
-
-![Implementation of memcpy in vizh](samples/memcopy/memcopy.png)

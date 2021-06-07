@@ -15,6 +15,16 @@ sys.path = sys.path[1:]
 
 build_dir = os.path.join(os.path.dirname(__file__), 'build')
 
+# Force bdist_wheel to build platform-specific wheels (also disgusting)
+try:
+    from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
+    class bdist_wheel(_bdist_wheel):
+        def finalize_options(self):
+            _bdist_wheel.finalize_options(self)
+            self.root_is_pure = False
+except ImportError:
+    bdist_wheel = None
+
 class BuildLibv(build_py): 
     def run(self):
         build_py.run(self)
@@ -24,6 +34,7 @@ class BuildLibv(build_py):
 
 setup(
     cmdclass={
-        'build_py': BuildLibv
+        'build_py': BuildLibv,
+        'bdist_wheel': bdist_wheel
     }
 )
