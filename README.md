@@ -62,10 +62,10 @@ The provided implementation is called `vizh` and compiles to C and can link exec
 
 ### Installation
 
-You can install `vizh` directly from this repository:
+You can install `vizh` directly from [PyPi](https://pypi.org/project/vizh/):
 
 ```console
-$ pip install git+https://github.com/TartanLlama/vizh.git
+$ pip install vizh
 ```
 
 ### Dependencies
