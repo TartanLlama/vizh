@@ -161,7 +161,7 @@ The valid instructions in vizh and their encodings are:
 - Right arrow: move the r/w head right
 - Up arrow: move the r/w head to the tape above the current one
 - Down arrow: move the r/w head to the tape below the current one
-- Function name in a circle: call the given function **not yet implemented**
+- Function name in a circle: call the given function
 - +: increment the value pointed to by the r/w head by `1`
 - -: decrement the value pointed to by the r/w head by `1`
 - Equilateral triangle with the point at the top: read the cell pointed to by the r/w head into the r/w head storage
