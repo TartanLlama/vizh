@@ -126,7 +126,7 @@ A vizh function is an image file containing:
 
 - The name of the function at the top left of the image
 - The number of arguments (tapes) it takes at the top right of the image
-- A sequnce of instructions in a horizontal lines
+- A sequence of instructions in horizontal lines
 
 Function names are alphanumeric: `[a-zA-Z][a-zA-Z0-9]*`.
 
